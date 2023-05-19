@@ -171,7 +171,9 @@ int main() {
 		FOG_CHAR[i] = FOG_ID[i];
 	}
 	FOG_CHAR[FOG_ID.size()] = '!';
-
+	
+	char FLAG_char[MSGSZIE];
+	string FLAG_str;
 	/*与云交互初始化*/
 	WSADATA wsaData1;
 	SOCKET sClient_Fog;
@@ -465,12 +467,12 @@ int main() {
 			/*—————向数据收集设备发送"NoDup"通知———————*/
 			listen(sListen, QUEUE_SIZE);
 			sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
-			
 			sendNo=send(sClient, NoDup_char, MSGSIZE, NULL);
-			
 			closesocket(sClient);
 			cout <<"NoDup_char"<< sendNo << endl;
-			/*—————————盲签名——————————*/
+
+	
+			
 			char x_char[MSGSIZE], y_char[MSGSIZE],tau_char[MSGSIZE],sh_char[MSGSIZE];
 			char SKFogPart1_char[MSGSIZE], SKFogPart2_char[MSGSIZE];
 
@@ -524,8 +526,15 @@ int main() {
 
 			listen(sListen, QUEUE_SIZE);
 			sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
-			
 			recvNo2=recv(sClient, sh_char, MSGSIZE, NULL);
+			closesocket(sClient);
+			
+
+			sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			while (connect(sClient_Fog, (sockaddr*)&server1, sizeof(SOCKADDR)) == -1) {
+			}
+			send(sClient_Fog, sh_char, MSGSIZE, NULL);
+			closesocket(sClient_Fog);
 			
 			cout << "tau_char" << recvNo1 << endl;
 			cout << "sh_char" << recvNo2 << endl;
@@ -568,29 +577,32 @@ int main() {
 				string Fog_str = nextRow_cloud[1];
 				string Link_str = nextRow_cloud[3];
 				cout << "Link"<<Link_str << endl;
-				cout << "Fog" << Fog_str << endl; /*如果短哈希碰撞到的雾节点还是自己，				     */
-                
+				cout << "Fog" << Fog_str << endl; 
 				Result_Link += Link_str;
 
+				element_t  F_res;
+				element_init_GT(F_res, pairing);
+				if(Fog==FOG_ID){//碰撞到自己
+					element_pow_zn(tau,tau,SK);
+					pairing_apply(F_res,tau,g,pairing);
+			
+				}
+				else{	
+				        	string TargetFogJPK_path = "XXXXX";
+					fstream readTargetFogJPK_ptr;
+					readTargetFogPK_ptr.open(TargetFogJPK_path);
+					getline(readTargetFogJPK_ptr, TagetFogJPK_str);
+					readTargetFogPK_ptr.close();
 
-				
-
-				string TargetFogJPK_path = "XXXXX";
-				fstream readTargetFogJPK_ptr;
-				readTargetFogPK_ptr.open(TargetFogJPK_path);
-				getline(readTargetFogJPK_ptr, TagetFogJPK_str);
-				readTargetFogPK_ptr.close();
-
-				element_t TargetFogJPK,F_res;
-				element_init_G1(TargetFogJPK, pairing);
-                element_init_GT(F_res, pairing);
+					element_t TargetFogJPK;
+					element_init_G1(TargetFogJPK, pairing);
+               
             
-				const char* TargetFogPK_ptr = TagetFogJPK_str.data();
-				element_set_str(TargetFogJPK, TargetFogJPK_ptr,10);
-                pairing_apply(F_res,tau,TargetFogJPK,pairing);
+					const char* TargetFogPK_ptr = TagetFogJPK_str.data();
+					element_set_str(TargetFogJPK, TargetFogJPK_ptr,10);
+                				pairing_apply(F_res,tau,TargetFogJPK,pairing);
 				
-
-				
+				}				
 				string F_res_str,RESULT_str;
 				char F_res_char[MSGSIZE],RESULT_char[MSGSIZE];
 				element_snprint(F_res_char, MSGSIZE, F_res);
@@ -602,42 +614,30 @@ int main() {
 						break;
 					}
 				}
+				F_res_char[F_res_str.size()]='!';
+				sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+				while (connect(sClient_Fog, (sockaddr*)&server, sizeof(SOCKADDR)) == -1) {
+				}
+				send(sClient_Fog, F_res_char, MSGSIZE, NULL);
+				closesocket(sClient_Fog);
 
-
-				
-
-				if (F_res_char== Tag_str) {
-
+				sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+				while (connect(sClient_Fog, (sockaddr*)&server, sizeof(SOCKADDR)) == -1) {
+				}
+				recv(sClient_Fog, FLAG_char, MSGSIZE, NULL);
+				closesocket(sClient_Fog);
+				FLAG_str.clear();
+				for (int i = 0; i < MSGSIZE; i++) {
+					if (FLAG_char[i] == '!') {
+						break;
+					}
+					FLAG_str += FLAG_char[i];
+				}
+				if (FLAG_str=="Dup") {
 					result = 2;
-
-					sClient_Fog2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-					while (connect(sClient_Fog2, (sockaddr*)&server2, sizeof(SOCKADDR)) == -1) {
-					}
-					
-					send(sClient_Fog2, OwnerID_char, MSGSIZE, NULL);
-					
-					closesocket(sClient_Fog2);
-
-					sClient_Fog2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-					while (connect(sClient_Fog2, (sockaddr*)&server2, sizeof(SOCKADDR)) == -1) {
-					}
-					
-					recv(sClient_Fog2, SKFogPart1_char, MSGSIZE, NULL);
-					
-					closesocket(sClient_Fog2);
-
-					sClient_Fog2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-					while (connect(sClient_Fog2, (sockaddr*)&server2, sizeof(SOCKADDR)) == -1) {
-					}
-					
-					recv(sClient_Fog2, SKFogPart2_char, MSGSIZE, NULL);
-					
-					
-					closesocket(sClient_Fog2);
-
 					break;
 				}
-				//system("pause");
+				
 
 			}
 			closesocket(sClient);
@@ -650,15 +650,7 @@ int main() {
 				
 				closesocket(sClient);
 
-				/*——————通知云端——————*/
-				sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-				while (connect(sClient_Fog, (sockaddr*)&server1, sizeof(SOCKADDR)) == -1) {
-				}
-				
-				send(sClient_Fog, Dup_char, MSGSIZE, NULL);
-				
-				
-				closesocket(sClient_Fog);
+
 
 				char Link_char[MSGSIZE];
 				for (int j = 0; j < Result_Link.size(); j++) {
@@ -669,9 +661,7 @@ int main() {
 				sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 				while (connect(sClient_Fog, (sockaddr*)&server1, sizeof(SOCKADDR)) == -1) {
 				}
-				
 				send(sClient_Fog, Link_char, MSGSIZE, NULL);
-				
 				closesocket(sClient_Fog);
 
 				/*————————    BEGIN		————————*/
@@ -709,22 +699,7 @@ int main() {
 				/*—————————END————————*/
 				/*——————传递验证元数据——————*/
 
-				/*——————传递解密共享———————*/
-				sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-				while (connect(sClient_Fog, (sockaddr*)&server1, sizeof(SOCKADDR)) == -1) {
-				}
 				
-				send(sClient_Fog, SKFogPart1_char, MSGSIZE, NULL);
-				
-				closesocket(sClient_Fog);
-
-				sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-				while (connect(sClient_Fog, (sockaddr*)&server1, sizeof(SOCKADDR)) == -1) {
-				}
-				
-				send(sClient_Fog, SKFogPart2_char, MSGSIZE, NULL);
-				
-				closesocket(sClient_Fog);
 
 
 			}
@@ -814,15 +789,7 @@ int main() {
 				//element_printf("g_a2: %B\n", g_a2);
 				element_printf("SKToFog: %B\n", SKToFog);
 
-				/*——————————BEGIN—————————*/
-				/*——————通知云端数据不重复——————*/
-				sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-				while (connect(sClient_Fog, (sockaddr*)&server1, sizeof(SOCKADDR)) == -1) {
-				}
 				
-				send(sClient_Fog,NoDup_char, MSGSIZE, NULL);
-				
-				closesocket(sClient_Fog);
 
 				sClient_Fog = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 				while (connect(sClient_Fog, (sockaddr*)&server1, sizeof(SOCKADDR)) == -1) {
@@ -875,8 +842,16 @@ int main() {
 
 
 				/*————————————BEGIN————————————*/
-				/*————————新块索引存入本地数据库————————*/
-				
+				/*————————新块索引,key share,tag.... 存入本地数据库————————*/
+				string INSERT_SQL_str = "XXXXXXXXXX";
+				const char* INSERT_SQL_char  = INSERT_SQL_str.data();
+				if (0 != mysql_query(&ceshi, INSERT_SQL_str)) {
+					cout << "更新失败" << endl;
+					system("pause");
+					return 0;
+				}
+
+
 	
 				
 				/*————————————END——————————————*/
