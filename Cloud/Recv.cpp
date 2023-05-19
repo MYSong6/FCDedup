@@ -30,7 +30,7 @@
 //#include <WinSock2.h>
 #define PORT_LOC XXX
 #define MSGSIZE XXX
-
+#define PORT_FOG XXX
 using namespace std;
 using namespace AlibabaCloud::OSS;
 
@@ -284,23 +284,93 @@ int main(int argc, const char* argv[]) {
 	write_Vmetadate.open(Vmetadate_path, ios::out);
 
 
-	char FLAG_char[MSGSIZE];
-	string FLAG_str;
+	char FLAG_char[MSGSIZE], pre_char[MSGSIZE],sh_char[MSGSIZE];
+	string FLAG_str,pre_str,sh_str;
+	element_t pre_t;
+	element_init_GT(pre_t,pairing);
+	string Fog_str;
 	for (int ord = 0; ord < BlockNum; ord++) {
-
 		listen(sListen, 1);
 		sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
-		
 		recv(sClient, FLAG_char, MSGSIZE, NULL);
-		
 		closesocket(sClient);
 		FLAG_str.clear();
+		Fog_str.clear();
 		for (int i = 0; i < MSGSIZE; i++) {
 			if (FLAG_char[i] == '!') {
 				break;
 			}
 			FLAG_str += FLAG_char[i];
+		}		
+		if(FLAG_str=="NoDup"){//进一步云查重
+			listen(sListen, 1);
+			sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
+			recv(sClient, sh_char, MSGSIZE, NULL);
+			closesocket(sClient);	
+			for (int i = 0; i < MSGSIZE; i++) {
+				if (sh_char[i] == '!') {
+					break;
+				}
+				sh_str += sh_char[i];
+			}
+			string select_sql = ""; //数据库查询短哈希
+			const char* select_sql_char = select_sql.data();
+			if (0 != mysql_query(&ceshi, select_sql_char))
+			{
+				printf("查询失败: %s\n", mysql_error(&ceshi));
+				mysql_close(&ceshi);                         //关闭连接
+				system("pause");
+				return 0;
+			}
+			res = mysql_store_result(&ceshi);
+			nextRow = mysql_fetch_row(res);
+			
+			while(nextRow!=NULL){
+				string tag_str = nextRow[0];
+				Fog_str = nextRow_cloud[1];
+				listen(sListen, 1);
+				sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
+				recv(sClient, pre_char, MSGSIZE, NULL);
+				closesocket(sClient);	
+				pre_str.clear();
+				for (int i = 0; i < MSGSIZE; i++) {
+					if (pre_char[i] == '!') {
+						break;
+					}
+					pre_str += pre_char[i];
+				}
+				const char* pre_ptr = pre_str.data();
+				element_set_str(pre_t,pre_ptr,10);
+				element_pow_zn(pre_t,pre_t,p);
+				element_snprint(pre_char, MSGSIZE, pre_t);
+				pre_str.clear();
+				for (int j = 0; j < MSGSIZE; j++) {
+					if ((pre_char[j] <= '9'&&pre_char[j] >= '0') || pre_char[j] == ']' || pre_char[j] == '[' || pre_char[j] == ',' || pre_char[j] == ' ') {
+						pre_str += pre_char[j];
+					}
+					else {
+						break;
+					}
+				}	
+				if(pre_str==tag_str){
+					FLAG_str.clear();
+					FLAG_str="Dup";	
+				}
+				for(int j=0;j<FLAG_str.size();j++){
+					FLAG_char[j] = FLAG_str[j];
+				}
+				FLAG_char[FLAG_str.size()] = '!';
+				listen(sListen, 1);
+				sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
+				send(sClient, FLAG_char, MSGSIZE, NULL);
+				closesocket(sClient);
+				if(FLAG_str=="Dup"){
+					break;	
+				}
+			}
+			
 		}
+			
 		if (FLAG_str == "FogDup") {//雾内就出现了重复
 			char Link_char[MSGSIZE], VmetadateL_char[MSGSIZE], VmetadateR_char[MSGSIZE];
 			string Link_str, VmetadateL_str, VmetadateR_str;
@@ -384,20 +454,42 @@ int main(int argc, const char* argv[]) {
 			recv(sClient, VmetadateRight_char, MSGSIZE, NULL);
 			
 			closesocket(sClient);
+			
+			//找另外一个雾节点要密钥共享
+			WSADATA wsaData2;
+			SOCKET sClient_Cloud;
+			SOCKADDR_IN server_fog;
+			WSAStartup(0x0202, &wsaData2);
+			sClient_cloud = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			memset(&server_fog, 0, sizeof(SOCKADDR_IN));
+			server_fog.sin_family = AF_INET;
+			server_fog.sin_port = htons(PORT_FOG);
+			server_fog.sin_addr.s_addr = inet_addr(Fog_str);
+			
+			sClient_cloud = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			while (connect(sClient_cloud, (sockaddr*)&server_fog, sizeof(SOCKADDR)) == -1) {
+			}
+			send(sClient_cloud, BlockOrd_char, MSGSIZE, NULL);
+			closesocket(sClient_cloud);
+			
+			sClient_cloud = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			while (connect(sClient_cloud, (sockaddr*)&server_fog, sizeof(SOCKADDR)) == -1) {
+			}
+			send(sClient_cloud, Owner_char, MSGSIZE, NULL);
+			closesocket(sClient_cloud);
+			
+			sClient_cloud = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			while (connect(sClient_cloud, (sockaddr*)&server_fog, sizeof(SOCKADDR)) == -1) {
+			}
+			recv(sClient_cloud, SKFogPart1_char, MSGSIZE, NULL);
+			closesocket(sClient_cloud);
 
-			listen(sListen, 1);
-			sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
-			
-			recv(sClient, SKFogPart1_char, MSGSIZE, NULL);
-			
-			closesocket(sClient);
 
-			listen(sListen, 1);
-			sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
-			
-			recv(sClient, SKFogPart2_char, MSGSIZE, NULL);
-			
-			closesocket(sClient);
+			sClient_cloud = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			while (connect(sClient_cloud, (sockaddr*)&server_fog, sizeof(SOCKADDR)) == -1) {
+			}
+			recv(sClient_cloud, SKFogPart2_char, MSGSIZE, NULL);
+			closesocket(sClient_cloud);
 
 			VmetadateRight_str.clear();
 			VmetadateLeft_str.clear();
@@ -460,7 +552,7 @@ int main(int argc, const char* argv[]) {
 			
 
 		}
-		else if (FLAG_str == "NoDup") {//短哈希都没碰上
+		else if (FLAG_str == "NoDup") {
 			/*——————接收短哈希,云密钥分享——————*/
 
 			listen(sListen, 1);
