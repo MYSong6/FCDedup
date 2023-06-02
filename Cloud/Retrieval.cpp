@@ -29,8 +29,7 @@
 #include <assert.h>
 //#include <WinSock2.h>
 #define PORT_LOC XX
-#define PORT_LOC1 XXX
-#define MSGSIZE XX
+#define MSGSIZE 1024
 
 using namespace std;
 using namespace AlibabaCloud::OSS;
@@ -53,12 +52,12 @@ string binaryToHex(const string& binaryStr) {
 string readFileIntoString(char * filename)
 {
 	ifstream ifile(filename);
-	//将文件读入到ostringstream对象buf中
+
 	ostringstream buf;
 	char ch;
 	while (ifile.get(ch))
 		buf.put(ch);
-	//返回与流对象buf关联的字符串
+	
 	return buf.str();
 }
 
@@ -87,7 +86,6 @@ string unsignedCharToHexString(unsigned char ch) {
 }
 
 
-/*Paper 4 Cloud receive data owner PK*/
 
 int main(int argc, const char* argv[]) {
 
@@ -97,12 +95,12 @@ int main(int argc, const char* argv[]) {
 	MYSQL_ROW row;
 
 	if (mysql_real_connect(&ceshi, "XX", "XX", "XX", "XX", XX, NULL, 0)) {
-		cout << "成功连接MYSQL!!! " << endl;
+		cout << "Connected MYSQL!!! " << endl;
 	}
 	string SELECT_SQL_str = "XXXX";
 	const char*  SELECT_SQL_char = SELECT_SQL_str.data();
 	if (0 != mysql_query(&ceshi, SELECT_SQL_char)) {
-		printf("SQL语句(查询)执行失败: %s\n", mysql_error(&ceshi));
+		printf("SQL Query Fail: %s\n", mysql_error(&ceshi));
 		system("pause");
 		return 0;
 	}
@@ -142,29 +140,28 @@ int main(int argc, const char* argv[]) {
 	element_set_str(p, p_ptr, 10);
 	element_set_str(q, q_ptr, 10);
 
-	/*—————————  BEGIN  ——————————*/
-	/*—————————TCP初始化——————————*/
+	
 	WSADATA wsaData;
 	SOCKET sListen;
 	SOCKET sClient;
-	SOCKADDR_IN local;//服务器地址
-	SOCKADDR client_user; //客户端地址
+	SOCKADDR_IN local;
+	SOCKADDR client_user;
 	memset(&local, 0, sizeof(local));
 
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
 	sListen = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sListen == INVALID_SOCKET) {
-		cout << "sListent是错的" << endl;
+		cout << "sListent Error" << endl;
 	}
 
 	local.sin_family = AF_INET;
 	local.sin_port = htons(PORT_LOC1);
-	local.sin_addr.s_addr = htonl(INADDR_ANY);// 任何一个客户端IP都可以连接
+	local.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	while (::bind(sListen, (struct sockaddr*)&local, sizeof(SOCKADDR)) == SOCKET_ERROR) {
 	}
-	cout << "Bind成功" << endl;
+	cout << "Bind success" << endl;
 	int nsize = sizeof(SOCKADDR);
 
 	char FILENAME_char[MSGSIZE],EndFlag_char[MSGSIZE];
@@ -195,7 +192,7 @@ int main(int argc, const char* argv[]) {
 	std::string BucketName = "XX";
 	std::string ObjectName1 = "XX";
 	std::string ObjectName2 = "XX" ;
-	cout << FILENAME_str << endl;
+	
 
 	InitializeSdk();
 

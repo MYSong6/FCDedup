@@ -29,7 +29,7 @@
 #include <assert.h>
 //#include <WinSock2.h>
 #define PORT_LOC XXX
-#define MSGSIZE XXX
+#define MSGSIZE 1024
 #define PORT_FOG XXX
 using namespace std;
 using namespace AlibabaCloud::OSS;
@@ -52,12 +52,12 @@ string binaryToHex(const string& binaryStr) {
 string readFileIntoString(char * filename)
 {
 	ifstream ifile(filename);
-	//将文件读入到ostringstream对象buf中
+	
 	ostringstream buf;
 	char ch;
 	while (ifile.get(ch))
 		buf.put(ch);
-	//返回与流对象buf关联的字符串
+	
 	return buf.str();
 }
 
@@ -88,7 +88,6 @@ string unsignedCharToHexString(unsigned char ch) {
 
 int main(int argc, const char* argv[]) {
 
-	/*——————————参数读取与初始化——————————*/
 	
 	
 	string N_str, g_str, p_str, PK_str,q_str;
@@ -119,14 +118,14 @@ int main(int argc, const char* argv[]) {
 	if (0 != mysql_query(&ceshi, select_sql_char))
 	{
 		printf("查询失败: %s\n", mysql_error(&ceshi));
-		mysql_close(&ceshi);                         //关闭连接
+		mysql_close(&ceshi);                        
 		system("pause");
 		return 0;
 	}
 
-	MYSQL_RES *res;                                         //SQL语句执行结果集
-	MYSQL_FIELD *field;                                     //包含字段信息的结构指针
-	MYSQL_ROW nextRow;                                      //存放查询sql语句字符串数组
+	MYSQL_RES *res;                                        
+	MYSQL_FIELD *field;                                    
+	MYSQL_ROW nextRow;                                     
 	res = mysql_store_result(&ceshi);
 	nextRow = mysql_fetch_row(res);
 	
@@ -163,21 +162,19 @@ int main(int argc, const char* argv[]) {
 	element_set_str(q, q_ptr, 10);
 
 
-	/*———————————————— BEGIN ————————————————————*/
-	/*—————————————TCP通信进参数传递—————————————————*/
+	
 	char FileOrd_char[MSGSIZE],Device_char[MSGSIZE],VmetadateLeft_char[MSGSIZE], VmetadateRight_char[MSGSIZE],Owner_char[MSGSIZE],BlockOrd_char[MSGSIZE],BlockNum_char[MSGSIZE], Fog_char[MSGSIZE], sh_char[MSGSIZE], SKCloudPart_char[MSGSIZE], g_a1_char[MSGSIZE];
 	string FileOrd_str,Device_str,VmetadateLeft_str,VmetadateRight_str, BlockNum_str, sh_str, SKCloudPart_str, g_a1_str, Fog_str, Owner_str;
 
 	char Cipher_char[BlockSize * 2], CipherLen_char[MSGSIZE];
 	string Ciphertext_str,CiphertextLen_str;
-	/*—————————  BEGIN  ——————————*/
-	/*—————————TCP初始化——————————*/
+	
 	
 	WSADATA wsaData;
 	SOCKET sListen;
 	SOCKET sClient;
-	SOCKADDR_IN local;//服务器地址
-	SOCKADDR client_user; //客户端地址
+	SOCKADDR_IN local;
+	SOCKADDR client_user; 
 	memset(&local, 0, sizeof(local));
 
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -189,7 +186,7 @@ int main(int argc, const char* argv[]) {
 	
 	local.sin_family = AF_INET;
 	local.sin_port = htons(PORT_LOC);
-	local.sin_addr.s_addr = htonl(INADDR_ANY);// 任何一个客户端IP都可以连接
+	local.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	while(::bind(sListen, (struct sockaddr*)&local, sizeof(SOCKADDR))==SOCKET_ERROR) {
 	}
@@ -200,8 +197,7 @@ int main(int argc, const char* argv[]) {
 	listen(sListen, 1);
 	cout << "Listen结束" << endl;
 	cout << "等待client的连接请求" << endl;
-	/*—————————   END   ——————————*/
-	/*—————————TCP初始化——————————*/
+	
 	int nsize = sizeof(SOCKADDR);
 
 	sClient = accept(sListen, (sockaddr*)&client_user, &nsize);
@@ -270,10 +266,6 @@ int main(int argc, const char* argv[]) {
 		FileOrd_str += FileOrd_char[i];
 	}
 
-	element_printf("g: %B\n", g);
-	element_printf("PK: %B\n", PK);
-	element_printf("p: %B\n", p);
-	element_printf("q: %B\n", q);
 	
 
 	string metadate_path = "XXXX";
@@ -318,7 +310,7 @@ int main(int argc, const char* argv[]) {
 			if (0 != mysql_query(&ceshi, select_sql_char))
 			{
 				printf("查询失败: %s\n", mysql_error(&ceshi));
-				mysql_close(&ceshi);                         //关闭连接
+				mysql_close(&ceshi);                         
 				system("pause");
 				return 0;
 			}
@@ -598,20 +590,13 @@ int main(int argc, const char* argv[]) {
 				}
 				g_a1_str += g_a1_char[i];
 			}
-			cout << "sh:" << sh_str << endl;
-			cout << "g_a1"<<g_a1_str << endl;
-			cout << "SKCloudPart" << SKCloudPart_str << endl;
-			//element_t g_a1, SKCloudPart;
-
-
-			/*————————为新数据块选Link————————*/
 			
 			select_sql = "SELECT * FROM link_order;";
 			const char* select_sql_char = select_sql.data();
 			if (0 != mysql_query(&ceshi, select_sql_char))
 			{
 				printf("查询失败: %s\n", mysql_error(&ceshi));
-				mysql_close(&ceshi);                         //关闭连接
+				mysql_close(&ceshi);                        
 				system("pause");
 				return 0;
 			}
@@ -631,7 +616,7 @@ int main(int argc, const char* argv[]) {
 			}
 			string SKPart_str;
 			
-			/*————————恢复云存储的密钥分享————————*/
+		
 			element_t SKPart, g_a1;
 			element_init_G1(g_a1, pairing);
 			element_init_G1(SKPart, pairing);
@@ -657,7 +642,7 @@ int main(int argc, const char* argv[]) {
 				}
 			}
 
-			/*——————插入块索引数据库—————*/
+			
 			
 			string SQL_INSERT_str = "INSERT INTO block_index VALUES('" + sh_str + "','" + Fog_str + "','" + SKCloudPart_str + "','" + New_ord + "');";
 			const char* SQL_INSERT_char = SQL_INSERT_str.data();
